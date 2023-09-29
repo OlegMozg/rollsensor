@@ -47,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->doubleSpinBox->setSuffix(QChar(176));
     ui->doubleSpinBox_2->setSuffix(QChar(176));
 
-    QFont font =ui->label_1->font();
+    QFont font,font_2 =ui->label_1->font();
     font.setPixelSize(36);
     ui->label_1->setFont(font);
     ui->label_2->setFont(font);
@@ -63,7 +63,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->label->setText("");
     ui->pushButton_3->setText("Устройства");
     ui->label_3->setText("Активные");
-    ui->label_4->setText("Неактивные");
+    font_2.setPixelSize(24);
+    ui->label_4->setFont(font_2);
+    ui->label_4->setText("Ошибки на шине:");
+    ui->checkBox->setText("Физический контроллер");
 
     password="";
 
@@ -87,8 +90,8 @@ void MainWindow::on_pushButton_clicked()//quit
     }
     if(ui->listWidget->count()!=0)
         ui->listWidget->clear();
-    if(ui->listWidget_2->count()!=0)
-        ui->listWidget_2->clear();
+    //if(ui->listWidget_2->count()!=0)
+    //    ui->listWidget_2->clear();
     //current_device=nullptr;
     this->close();
 }
@@ -182,7 +185,7 @@ void MainWindow::on_pushButton_2_clicked()//start timer//активна толь
 
 void MainWindow::on_pushButton_3_clicked()//view devices
 {
-    ui->listWidget_2->clear();
+  //  ui->listWidget_2->clear();
     ui->listWidget->clear();
     QString errorstring;
     QMessageBox msg;

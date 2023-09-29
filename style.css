@@ -1,0 +1,9 @@
+QMainWindow{
+
+   border-image: url(:/back.jpg) 0 0 0 0 stretch stretch;
+
+}
+QPushButton{
+  background-color: green;
+  color: black;
+}
