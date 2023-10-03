@@ -47,6 +47,7 @@ private:
     //  QCanBusDevice* current_device;
     QTimer* timer;
     CanDevice* device;
+    QString physical_name="can0";
     const QString plugin_names[2]={QStringLiteral("socketcan"),QStringLiteral("virtualcan")};
     const QStringList virtual_names{"can0","can1"};
     const QStringList titles{"PHYSICAL","VIRTUAL"};

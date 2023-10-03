@@ -19,13 +19,19 @@ public:
         PHYSICAL_INACTIVE=0x03,
         PHYSICAL_ACTIVE=0xFF
     };
-    CanDevice( uint8_t FLAG=Device_Type::VIRTUAL_CAN, uint16_t idVendor=101 ,uint16_t idProduct=102,QCanBusDevice* device=nullptr){
+    CanDevice(uint8_t FLAG=Device_Type::VIRTUAL_CAN){
+        this->FLAG=FLAG;
+        current_device=nullptr;
+        device_descriptor.idProduct=0;
+        device_descriptor.idVendor=1;
+    }
+    CanDevice(uint16_t idVendor ,uint16_t idProduct,QCanBusDevice* device=nullptr,uint8_t FLAG=Device_Type::VIRTUAL_CAN){
         this->FLAG=FLAG;
         current_device=device;
         device_descriptor.idProduct=idProduct;
         device_descriptor.idVendor=idVendor;
     }
-    void set_VFLAG(uint8_t is_virtual){
+    void set_FLAG(Device_Type is_virtual){
         FLAG=is_virtual;
     }
     void set_device(QCanBusDevice* device){

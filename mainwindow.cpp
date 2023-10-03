@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     timer=new QTimer(this);
-    device=new CanDevice(ID_VENDOR,ID_PRODUCT);
+    device=new CanDevice();
     ui->label_1->setText("Ось X:");
     ui->label_2->setText("Ось Y:");
     ui->doubleSpinBox->setMinimum(MIN_ANGLE);
@@ -90,9 +90,7 @@ void MainWindow::on_pushButton_clicked()//quit
     }
     if(ui->listWidget->count()!=0)
         ui->listWidget->clear();
-    //if(ui->listWidget_2->count()!=0)
-    //    ui->listWidget_2->clear();
-    //current_device=nullptr;
+
     this->close();
 }
 
@@ -178,40 +176,68 @@ void MainWindow::on_pushButton_2_clicked()//start timer//активна толь
     if(!timer->isActive()){
         timer->setInterval(PERIOD*10);
         ui->label->setText("Имитация началась!");
+        ui->pushButton_2->setEnabled(false);
         timer->start();
     }
 }
 
-
 void MainWindow::on_pushButton_3_clicked()//view devices
 {
-  //  ui->listWidget_2->clear();
     ui->listWidget->clear();
     QString errorstring;
     QMessageBox msg;
+    bool select_pi=false;
+    if(ui->checkBox->isChecked())
+        select_pi=true;
     QList<QCanBusDeviceInfo> devices= QCanBus::instance()->availableDevices(plugin_names[0],&errorstring);
-    if(!errorstring.isEmpty()){
+    if(!errorstring.isEmpty()){//плагин может не поддерживать эту функцию ^
         msg.setText(errorstring);
         msg.exec();
+        //попытка
+        //device->set_FLAG(CanDevice::VIRTUAL_CAN);
+        goto virtual_attempt;
     }
-    if(devices.size()==0){
-        //проверить подключен ли can-контроллер
+
+    if(devices.size()!=0){
         QListWidgetItem* item=nullptr;
-        foreach(auto name,virtual_names){
-            item=new QListWidgetItem(name+":"+titles[1]);
-            ui->listWidget->addItem(item);
+        foreach (auto element, devices) {
+            if(element.isVirtual()){
+                if(select_pi)
+                    continue;
+                else{
+                    item=new QListWidgetItem(element.name()+":"+titles[1]);
+                    ui->listWidget->addItem(item);
+                }
+
+            }
+            else{
+                item=new QListWidgetItem(element.name()+":"+titles[0]);
+                ui->listWidget->addItem(item);
+            }
         }
-        device->set_VFLAG(true);
-    }
-    else
-    {
-        QListWidgetItem* item=nullptr;
-        foreach (auto device, devices) {
-            item=new QListWidgetItem(device.name()+":"+titles[0]);
-            ui->listWidget->addItem(item);
+        if(ui->listWidget->count()==0){
+         //   device->set_FLAG(CanDevice::PHYSICAL_INACTIVE);
+            ui->label_4->setText("Девайс не активен");
         }
-        device->set_VFLAG(false);
     }
+    else{
+            if(select_pi){
+                    QListWidgetItem* item=new QListWidgetItem(physical_name+":"+titles[0]);
+                    ui->listWidget->addItem(item);
+                   // device->set_FLAG(CanDevice::PHYSICAL_INACTIVE);
+                    ui->label_4->setText("Девайс не активен");
+            }
+            else{
+                    virtual_attempt:
+                    QListWidgetItem* item=nullptr;
+                    foreach(auto name,virtual_names){
+                        item=new QListWidgetItem(name+":"+titles[1]);
+                        ui->listWidget->addItem(item);
+                        //device->set_FLAG(CanDevice::VIRTUAL_CAN);
+                    }
+            }
+    }
+
     ui->listWidget->show();
 
 }
@@ -225,30 +251,59 @@ void MainWindow::on_listWidget_itemDoubleClicked(QListWidgetItem *item)
     QMessageBox MSG;
     QString interface_name=item->text();
     QCanBusDevice* device=nullptr;
-    if(this->device->get_flag()){
-        device=QCanBus::instance()->createDevice(plugin_names[1],interface_name.remove(":"+titles[1]),&errormsg);
-        if(DEBUG)
-            device->setConfigurationParameter(QCanBusDevice::ReceiveOwnKey,true);
-        status=device->connectDevice();
+
+    if(interface_name.contains(titles[1])){
+            if(interface_name.contains("vcan"))
+            {
+                    this->device->set_FLAG(CanDevice::VCAN);
+                    MSG.setText("Неподдерживаемый тип устройства!");
+                    MSG.exec();
+                    return;
+            }
+            else{
+                    device=QCanBus::instance()->createDevice(plugin_names[1],interface_name.remove(":"+titles[1]),&errormsg);
+                    this->device->set_FLAG(CanDevice::VIRTUAL_CAN);
+                    if(DEBUG)
+                        device->setConfigurationParameter(QCanBusDevice::ReceiveOwnKey,true);
+
+                    try{
+                    status=device->connectDevice();
+                    }
+                    catch(...){
+                       //
+                    }
+            }
+    }
+    else if(interface_name.contains(titles[0])){
+            QString if_name=interface_name.remove(":"+titles[0]);
+            command="ip link set can0 down";
+
+            executeSudoCommand(command);
+            device=QCanBus::instance()->createDevice(plugin_names[0],if_name,&errormsg);
+            if(device==nullptr){
+                    MSG.setText("Проверьте наличие устройства!");
+                    MSG.exec();
+                    return;
+            }
+
+            device->setConfigurationParameter(QCanBusDevice::BitRateKey,this->device->rate());
+            if(DEBUG)
+                device->setConfigurationParameter(QCanBusDevice::ReceiveOwnKey,true);
+            command="ip link set "+physical_name+" up";
+            executeSudoCommand(command);
+            status=device->connectDevice();
+            // device->setConfigurationParameter(QCanBusDevice::ProtocolKey,CAN_BCM);
     }
     else{
-        QString if_name=interface_name.remove(":"+titles[0]);
-      //  QString command_name="sudo ip link set"+if_name+"up";
-      //  const char* command=command_name.toUtf8().constData();
-        system("sudo ip link set can0 down");
-        device=QCanBus::instance()->createDevice(plugin_names[0],if_name,&errormsg);
-        device->setConfigurationParameter(QCanBusDevice::BitRateKey,this->device->rate());
-        if(DEBUG)
-            device->setConfigurationParameter(QCanBusDevice::ReceiveOwnKey,true);
-       // device->setConfigurationParameter(QCanBusDevice::ProtocolKey,CAN_BCM);
-        command="ip link set can0 up";
-        status=device->connectDevice();
-
+            MSG.setText("Что-то пошло не так.Интерфейс не распознан!");
+            MSG.exec();
+            return;
     }
+
     if(errormsg=="" && status==true){
         is_config=true;
         this->device->set_device(device);
-        connect(this->device->device(),SIGNAL(framesReceived()),this,SLOT(read_frame()));
+        connect(this->device->device(),SIGNAL(framesReceived()),this->device,SLOT(read_frame()));
     }
     else {
         is_config=false;
@@ -293,7 +348,7 @@ void MainWindow::executeSudoCommand(const QString& command){
 
 void MainWindow::ask_for_password(){
     bool ok;
-    QString password=QInputDialog::getText(this,"Доступ к контроллеру","Введите пароль:",QLineEdit::Normal,"",&ok);
+    QString password=QInputDialog::getText(this,"Доступ к контроллеру","Введите пароль:",QLineEdit::Password,"",&ok);
     if(ok && password!=""){
         this->password=password;
         return;
@@ -317,4 +372,5 @@ void MainWindow::reaction_on_unsended_msg(const QString& err_msg){
     timer->stop();
     ui->label->setText("Имитация остановлена!");
     ui->listWidget->setEnabled(true);
+
 }
