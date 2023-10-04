@@ -16,8 +16,7 @@ public:
     enum Device_Type{
         VIRTUAL_CAN=0x01,
         VCAN=0x02,
-        PHYSICAL_INACTIVE=0x03,
-        PHYSICAL_ACTIVE=0xFF
+        PHYSICAL_CAN=0x03
     };
     CanDevice(uint8_t FLAG=Device_Type::VIRTUAL_CAN){
         this->FLAG=FLAG;
@@ -55,9 +54,11 @@ public:
 public :
 signals:
     void msg_wasnt_sent(QString err_msg);
+    void bus_error(QString);
 private slots:
     void BCM_send(double,double);
     void read_frame();
+    void bus_error_catch(QCanBusDevice::CanBusError);
 };
 
 #endif // CAN_INTERFACE_H

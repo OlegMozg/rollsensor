@@ -40,22 +40,20 @@ private slots:
 
     void reaction_on_unsended_msg(const QString&);
 
+    void show_error(QString);
 
 private:
     Ui::MainWindow *ui;
     spinbox box_1,box_2;
-    //  QCanBusDevice* current_device;
     QTimer* timer;
     CanDevice* device;
     QString physical_name="can0";
     const QString plugin_names[2]={QStringLiteral("socketcan"),QStringLiteral("virtualcan")};
     const QStringList virtual_names{"can0","can1"};
     const QStringList titles{"PHYSICAL","VIRTUAL"};
-    //   const int bit_rate=250000;
-    //bool VFLAG;
     QString password;
 
-    void executeSudoCommand(const QString& command);
+    QString executeSudoCommand(const QString& command);
     void ask_for_password();
 
 };
